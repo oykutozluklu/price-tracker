@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Price Tracker</title>
+
+  <!-- Inter font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* ── Sıfırlama ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    .header {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .header-brand .dot {
+      width: 10px;
+      height: 10px;
+      background: #6366f1;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .header-meta { font-size: 12px; color: #9ca3af; }
+
+    /* ── Ana kapsayıcı ───────────────────────────────────────────── */
+    .main {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 28px 24px 100px;
+    }
+
+    /* ── Kart ───────────────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    /* ── Toolbar (arama + başlık) ───────────────────────────────── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid #f3f4f6;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      white-space: nowrap;
+    }
+
+    /* Arama kutusu */
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      max-width: 300px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      height: 34px;
+      padding: 0 10px 0 30px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: #111827;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      background: #fafafa;
+    }
+
+    .search-input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+      background: #fff;
+    }
+
+    .search-input::placeholder { color: #d1d5db; }
+
+    /* ── Ürün Ekleme Barı ───────────────────────────────────────── */
+    .add-bar {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .add-form {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .add-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      white-space: nowrap;
+    }
+
+    .add-input {
+      flex: 1;
+      height: 42px;
+      padding: 0 14px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: #111827;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      min-width: 0;
+    }
+
+    .add-input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+    }
+
+    .add-input::placeholder { color: #d1d5db; }
+
+    .add-btn {
+      height: 42px;
+      padding: 0 20px;
+      background: #6366f1;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s;
+      flex-shrink: 0;
+    }
+
+    .add-btn:hover:not(:disabled) { opacity: 0.88; }
+    .add-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+    .add-status {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.5;
+      animation: fadeIn 0.15s ease;
+    }
+
+    .add-status.ok  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .add-status.err { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+    /* ── Tablo (masaüstü) ───────────────────────────────────────── */
+    .table-wrap { overflow-x: auto; }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead th {
+      background: #f9fafb;
+      padding: 11px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      border-bottom: 1px solid #e5e7eb;
+      white-space: nowrap;
+    }
+
+    tbody tr.product-row { cursor: pointer; transition: background 0.12s; }
+    tbody tr.product-row:hover   { background: #fafafa; }
+    tbody tr.product-row.expanded { background: #f5f3ff; }
+
+    tbody td {
+      padding: 13px 16px;
+      font-size: 14px;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    .product-name {
+      font-weight: 500;
+      color: #111827;
+      max-width: 260px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .product-url {
+      display: block;
+      font-size: 11px;
+      color: #d1d5db;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 260px;
+      margin-top: 2px;
+    }
+
+    .price {
+      font-weight: 600;
+      font-size: 15px;
+      color: #111827;
+      white-space: nowrap;
+    }
+
+    /* ── Değişim badge ──────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge-up   { background: #fef2f2; color: #dc2626; }
+    .badge-down { background: #f0fdf4; color: #16a34a; }
+    .badge-flat { background: #f9fafb; color: #9ca3af; }
+
+    /* Hedef fiyat rozeti */
+    .target-badge {
+      display: inline-block;
+      font-size: 11px;
+      margin-left: 4px;
+      vertical-align: middle;
+      cursor: default;
+      title: attr(title);
+    }
+
+    .date, .count { font-size: 13px; color: #6b7280; }
+
+    .chevron {
+      color: #d1d5db;
+      font-size: 11px;
+      display: block;
+      transition: transform 0.2s;
+      text-align: center;
+    }
+
+    tbody tr.product-row.expanded .chevron { transform: rotate(180deg); }
+
+    /* ── Aksiyon ikonları ───────────────────────────────────────── */
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px 7px;
+      border-radius: 6px;
+      font-size: 15px;
+      line-height: 1;
+      transition: background 0.12s;
+      color: inherit;
+    }
+
+    .icon-btn:hover { background: #f3f4f6; }
+    .icon-btn.delete:hover { background: #fef2f2; }
+
+    /* ── Grafik satırı ──────────────────────────────────────────── */
+    tr.chart-row td {
+      padding: 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .chart-wrap {
+      padding: 20px 24px 24px;
+      background: #fafafa;
+      border-top: 1px solid #f3f4f6;
+    }
+
+    .chart-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .chart-canvas-wrap { height: 200px; position: relative; }
+
+    .chart-msg {
+      text-align: center;
+      padding: 40px;
+      font-size: 13px;
+      color: #9ca3af;
+    }
+
+    /* ── Boş durum ──────────────────────────────────────────────── */
+    .empty-state { text-align: center; padding: 72px 32px; }
+
+    .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.7; }
+
+    .empty-state h2 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+
+    .empty-state p { font-size: 14px; color: #9ca3af; line-height: 1.6; }
+    .empty-state code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #6366f1;
+    }
+
+    /* ── Yenile butonu (fixed) ──────────────────────────────────── */
+    .refresh-btn {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: #6366f1;
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      padding: 13px 22px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 18px rgba(99,102,241,0.38);
+      transition: opacity 0.15s, transform 0.15s;
+      z-index: 200;
+    }
+
+    .refresh-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    .refresh-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    /* ── Animasyonlar ───────────────────────────────────────────── */
+    @keyframes spin    { to { transform: rotate(360deg); } }
+    @keyframes fadeIn  { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+    .spin { display: inline-block; animation: spin 0.75s linear infinite; }
+
+    /* ── Popup overlay (hedef fiyat) ────────────────────────────── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      animation: fadeIn 0.15s ease;
+    }
+
+    .popup {
+      background: #fff;
+      border-radius: 14px;
+      padding: 28px;
+      width: 340px;
+      max-width: calc(100vw - 40px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+    }
+
+    .popup h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 6px;
+    }
+
+    .popup .popup-sub {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-bottom: 18px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .popup-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .popup-input {
+      flex: 1;
+      height: 40px;
+      padding: 0 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: #111827;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .popup-input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+    }
+
+    .popup-currency {
+      font-size: 13px;
+      color: #6b7280;
+      white-space: nowrap;
+    }
+
+    .popup-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    .btn-secondary {
+      height: 36px;
+      padding: 0 16px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+
+    .btn-secondary:hover { background: #f9fafb; }
+
+    .btn-primary {
+      height: 36px;
+      padding: 0 16px;
+      border: none;
+      border-radius: 8px;
+      background: #6366f1;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: #fff;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .btn-primary:hover { opacity: 0.88; }
+
+    .btn-danger {
+      height: 36px;
+      padding: 0 14px;
+      border: none;
+      border-radius: 8px;
+      background: #fef2f2;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: #dc2626;
+      cursor: pointer;
+      margin-right: auto;
+      transition: background 0.12s;
+    }
+
+    .btn-danger:hover { background: #fee2e2; }
+
+    /* ── Responsive — mobil kart görünümü (<768px) ──────────────── */
+    @media (max-width: 768px) {
+      .header { padding: 0 16px; }
+
+      .main { padding: 16px 12px 90px; }
+
+      /* Ürün ekleme barı */
+      .add-form { flex-wrap: wrap; }
+      .add-label { width: 100%; }
+      .add-input { width: 100%; }
+      .add-btn   { width: 100%; justify-content: center; }
+
+      /* Arama tam genişlik */
+      .search-wrap { max-width: 100%; flex: 1 1 100%; }
+
+      /* Tablo gizle, kart görünümü göster */
+      .table-wrap { display: none; }
+      .mobile-cards { display: block; }
+
+      /* Yenile butonu biraz sola çek */
+      .refresh-btn { right: 16px; bottom: 16px; padding: 12px 18px; }
+    }
+
+    /* Masaüstünde mobil kartları gizle */
+    .mobile-cards { display: none; }
+
+    /* Mobil ürün kartı */
+    .m-card {
+      padding: 16px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .m-card:last-child { border-bottom: none; }
+
+    .m-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .m-card-name {
+      font-weight: 600;
+      font-size: 14px;
+      color: #111827;
+      line-height: 1.4;
+    }
+
+    .m-card-url {
+      font-size: 11px;
+      color: #d1d5db;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 220px;
+      display: block;
+      margin-top: 2px;
+    }
+
+    .m-card-price {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 8px;
+    }
+
+    .m-card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .m-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .m-card-actions { display: flex; gap: 4px; }
+
+    /* Mobil grafik alanı */
+    .m-chart-wrap {
+      padding: 12px 0 4px;
+      display: none;
+    }
+
+    .m-chart-wrap.open { display: block; }
+
+    .m-chart-canvas-wrap { height: 180px; position: relative; }
+  </style>
+</head>
+
+<body>
+
+<!-- ═══ Header ═══════════════════════════════════════════════════ -->
+<header class="header">
+  <div class="header-brand">
+    <span class="dot"></span>
+    Price Tracker
+  </div>
+  <span class="header-meta" id="last-update">Yükleniyor…</span>
+</header>
+
+<!-- ═══ Ana içerik ════════════════════════════════════════════════ -->
+<main class="main">
+
+  <!-- Ürün Ekleme Barı -->
+  <div class="add-bar">
+    <div class="add-form">
+      <span class="add-label">Takibe Al</span>
+      <input
+        type="url"
+        id="add-input"
+        class="add-input"
+        placeholder="Ürün URL'sini yapıştırın…"
+        onkeydown="if(event.key==='Enter') trackProduct()"
+      >
+      <button class="add-btn" id="add-btn" onclick="trackProduct()">Takibe Al</button>
+    </div>
+    <!-- Başarı / hata mesajı dinamik eklenir -->
+  </div>
+
+  <!-- Ürün tablosu + mobil kartları -->
+  <div class="card" id="card">
+    <div class="chart-msg">Yükleniyor…</div>
+  </div>
+
+</main>
+
+<!-- ═══ Yenile butonu ════════════════════════════════════════════ -->
+<button class="refresh-btn" id="refresh-btn" onclick="refresh()">
+  <span id="refresh-icon">↻</span>
+  Yenile
+</button>
+
+<!-- ═══ Hedef fiyat popup ════════════════════════════════════════ -->
+<div id="overlay" class="overlay" style="display:none" onclick="closePopup(event)">
+  <div class="popup" onclick="event.stopPropagation()">
+    <h3>🔔 Fiyat Eşiği Belirle</h3>
+    <div class="popup-sub" id="popup-name">—</div>
+    <div class="popup-row">
+      <input
+        type="number"
+        id="popup-input"
+        class="popup-input"
+        placeholder="Örn. 1200"
+        min="0"
+        step="1"
+        onkeydown="if(event.key==='Enter') saveTarget()"
+      >
+      <span class="popup-currency">TRY</span>
+    </div>
+    <div class="popup-actions">
+      <!-- Eşiği kaldır butonu (yalnızca eşik varsa görünür) -->
+      <button class="btn-danger" id="popup-clear-btn" onclick="clearTarget()" style="display:none">
+        Eşiği Kaldır
+      </button>
+      <button class="btn-secondary" onclick="closePopup()">İptal</button>
+      <button class="btn-primary" onclick="saveTarget()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ JavaScript ═══════════════════════════════════════════════ -->
+<script>
+"use strict";
+
+/* ── Durum ──────────────────────────────────────────────────────── */
+let expandedUrl     = null;   // Açık accordion URL'i
+let currentProducts = [];     // Son yüklenen ürün listesi
+const charts        = {};     // idx → Chart instance cache (masaüstü)
+const mCharts       = {};     // idx → Chart instance cache (mobil)
+
+// Hedef fiyat popup durumu
+let popupProductId   = null;
+let popupHasTarget   = false;
+
+/* ── Yardımcılar ────────────────────────────────────────────────── */
+
+// "1575.00 TRY" / "1.575,00 TL" / "$29.99" → float veya null
+function parsePriceValue(str) {
+  if (!str) return null;
+  const m = str.match(/[\d]+(?:[.,][\d]+)*/);
+  if (!m) return null;
+  let raw = m[0];
+  if (raw.includes(',')) {
+    raw = raw.replace(/\./g, '').replace(',', '.');
+  } else if ((raw.match(/\./g) || []).length > 1) {
+    raw = raw.replace(/\./g, '');
+  }
+  const v = parseFloat(raw);
+  return isNaN(v) ? null : v;
+}
+
+// ISO tarihi Türkçe formata çevirir
+function formatDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('tr-TR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+// HTML escape — XSS önlemi
+function esc(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Şu anki saat (HH:MM)
+function nowTime() {
+  return new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
+
+/* ── API çağrıları ──────────────────────────────────────────────── */
+
+async function fetchProducts() {
+  const r = await fetch('/products');
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+async function fetchHistory(url) {
+  const r = await fetch('/history?url=' + encodeURIComponent(url));
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+/* ── Tablo render ───────────────────────────────────────────────── */
+
+// products dizisini alıp hem masaüstü tablosunu hem mobil kartları oluşturur
+function renderTable(products) {
+  const card = document.getElementById('card');
+
+  if (!products || products.length === 0) {
+    card.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <h2>Henüz takip edilen ürün yok</h2>
+        <p>Yukarıdaki alana bir ürün URL'si yapıştırıp<br>
+           <strong>Takibe Al</strong> butonuna basın.</p>
+      </div>`;
+    return;
+  }
+
+  // ── Masaüstü tablo satırları ─────────────────────────────────
+  let tableRows = '';
+
+  products.forEach((p, i) => {
+    const badge    = buildBadge(p.change_pct);
+    const isOpen   = expandedUrl === p.url;
+    const hasTarget = p.target_price != null;
+
+    tableRows += `
+      <tr class="product-row${isOpen ? ' expanded' : ''}" id="row-${i}"
+          onclick="toggleRow(${i}, '${esc(p.url)}')">
+        <td>
+          <div class="product-name" title="${esc(p.name || '')}">${esc(p.name || 'İsimsiz Ürün')}${hasTarget ? `<span class="target-badge" title="Hedef: ${p.target_price} TRY">🎯</span>` : ''}</div>
+          <span class="product-url" title="${esc(p.url)}">${esc(p.url)}</span>
+        </td>
+        <td><span class="price">${esc(p.latest_price || '—')}</span></td>
+        <td style="text-align:center">${badge}</td>
+        <td><span class="date">${formatDate(p.first_recorded_at)}</span></td>
+        <td style="text-align:center"><span class="count">${p.check_count}</span></td>
+        <td>
+          <div class="actions" onclick="event.stopPropagation()">
+            <button class="icon-btn" title="Fiyat eşiği belirle"
+                    onclick="openPopup(${p.id}, '${esc(p.name || p.url)}', ${p.target_price ?? 'null'})">🔔</button>
+            <button class="icon-btn delete" title="Takipten çıkar"
+                    onclick="deleteProduct(${p.id}, '${esc(p.name || p.url)}')">🗑️</button>
+            <span class="chevron">▼</span>
+          </div>
+        </td>
+      </tr>
+
+      <tr class="chart-row" id="detail-${i}" style="display:${isOpen ? 'table-row' : 'none'}">
+        <td colspan="6">
+          <div class="chart-wrap">
+            <div class="chart-title">Fiyat Grafiği</div>
+            <div class="chart-canvas-wrap">
+              <canvas id="chart-${i}"></canvas>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+  });
+
+  // ── Mobil kartlar ────────────────────────────────────────────
+  let mobileCards = '';
+
+  products.forEach((p, i) => {
+    const badge    = buildBadge(p.change_pct);
+    const isOpen   = expandedUrl === p.url;
+    const hasTarget = p.target_price != null;
+
+    mobileCards += `
+      <div class="m-card" id="m-card-${i}">
+        <div class="m-card-header">
+          <div>
+            <div class="m-card-name">${esc(p.name || 'İsimsiz Ürün')}${hasTarget ? ' 🎯' : ''}</div>
+            <span class="m-card-url" title="${esc(p.url)}">${esc(p.url)}</span>
+          </div>
+          <div class="m-card-actions" onclick="event.stopPropagation()">
+            <button class="icon-btn" title="Fiyat eşiği"
+                    onclick="openPopup(${p.id}, '${esc(p.name || p.url)}', ${p.target_price ?? 'null'})">🔔</button>
+            <button class="icon-btn delete" title="Sil"
+                    onclick="deleteProduct(${p.id}, '${esc(p.name || p.url)}')">🗑️</button>
+          </div>
+        </div>
+
+        <div class="m-card-price">${esc(p.latest_price || '—')}</div>
+
+        <div class="m-card-meta">
+          ${badge}
+          <span class="date">${p.check_count} kontrol</span>
+        </div>
+
+        <div class="m-card-footer">
+          <span class="date">İlk: ${formatDate(p.first_recorded_at)}</span>
+          <button class="icon-btn" style="font-size:12px;color:#6366f1;font-weight:600;"
+                  onclick="toggleMobileChart(${i}, '${esc(p.url)}')">
+            ${isOpen ? '▲ Grafiği Gizle' : '▼ Grafik'}
+          </button>
+        </div>
+
+        <!-- Mobil grafik alanı -->
+        <div class="m-chart-wrap${isOpen ? ' open' : ''}" id="m-detail-${i}">
+          <div class="m-chart-canvas-wrap">
+            <canvas id="m-chart-${i}"></canvas>
+          </div>
+        </div>
+      </div>`;
+  });
+
+  // ── Kart içeriğini yaz ───────────────────────────────────────
+  card.innerHTML = `
+    <!-- Arama toolbar -->
+    <div class="toolbar">
+      <span class="toolbar-title" id="count-label">${products.length} ürün takip ediliyor</span>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="search" id="search-input" class="search-input"
+               placeholder="Ürün ara…" oninput="filterTable()" autocomplete="off">
+      </div>
+    </div>
+
+    <!-- Masaüstü tablo -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Ürün</th>
+            <th>Güncel Fiyat</th>
+            <th style="text-align:center">Değişim</th>
+            <th>İlk Kayıt</th>
+            <th style="text-align:center">Kontrol</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody">${tableRows}</tbody>
+      </table>
+    </div>
+
+    <!-- Mobil kartlar -->
+    <div class="mobile-cards" id="mobile-cards">${mobileCards}</div>`;
+}
+
+/* ── Değişim badge'i ────────────────────────────────────────────── */
+function buildBadge(change_pct) {
+  if (change_pct === null || change_pct === undefined) {
+    return '<span class="badge badge-flat">—</span>';
+  }
+  if (change_pct > 0) return `<span class="badge badge-up">↑ %${change_pct}</span>`;
+  if (change_pct < 0) return `<span class="badge badge-down">↓ %${Math.abs(change_pct)}</span>`;
+  return '<span class="badge badge-flat">Değişmedi</span>';
+}
+
+/* ── Arama / filtreleme ─────────────────────────────────────────── */
+// API çağrısı yapmaz; mevcut DOM satırlarını/kartlarını anlık filtreler
+function filterTable() {
+  const query = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
+
+  let visibleCount = 0;
+
+  currentProducts.forEach((p, i) => {
+    const text = ((p.name || '') + ' ' + p.url).toLowerCase();
+    const match = !query || text.includes(query);
+
+    // Masaüstü: product-row ve chart-row'u birlikte göster/gizle
+    const row       = document.getElementById('row-' + i);
+    const detailRow = document.getElementById('detail-' + i);
+    // Mobil: m-card'ı göster/gizle
+    const mCard     = document.getElementById('m-card-' + i);
+
+    if (row)       row.style.display       = match ? '' : 'none';
+    if (detailRow) detailRow.style.display = (match && expandedUrl === p.url) ? 'table-row' : 'none';
+    if (mCard)     mCard.style.display     = match ? '' : 'none';
+
+    if (match) visibleCount++;
+  });
+
+  // Sonuç sayısını güncelle
+  const label = document.getElementById('count-label');
+  if (label) {
+    label.textContent = query
+      ? `${visibleCount} / ${currentProducts.length} ürün`
+      : `${currentProducts.length} ürün takip ediliyor`;
+  }
+}
+
+/* ── Grafik ─────────────────────────────────────────────────────── */
+
+// Ortak grafik oluşturucu: canvas, url ve chart cache objesini alır
+async function buildChart(canvasId, url, cacheObj, cacheKey) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || cacheObj[cacheKey]) return;
+
+  const wrap  = canvas.closest('[class*="canvas-wrap"]');
+  canvas.style.display = 'none';
+
+  const msg = document.createElement('div');
+  msg.className = 'chart-msg';
+  msg.textContent = 'Grafik yükleniyor…';
+  wrap.appendChild(msg);
+
+  try {
+    const data    = await fetchHistory(url);
+    // Tarihçeyi eskiden yeniye çevir (API ters döner)
+    const history = [...data.history].reverse();
+
+    const labels = history.map(h => {
+      const d = new Date(h.recorded_at);
+      return d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' })
+        + ' ' + d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+    });
+
+    const prices = history.map(h => parsePriceValue(h.price));
+
+    msg.remove();
+    canvas.style.display = 'block';
+
+    cacheObj[cacheKey] = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Fiyat',
+          data: prices,
+          borderColor: '#6366f1',
+          backgroundColor: 'rgba(99,102,241,0.06)',
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: '#6366f1',
+          pointBorderWidth: 2,
+          tension: 0.35,
+          fill: true,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1f2937',
+            titleFont: { family: 'Inter', size: 12 },
+            bodyFont:  { family: 'Inter', size: 13 },
+            callbacks: {
+              label: ctx => ctx.raw !== null
+                ? ' ' + ctx.raw.toLocaleString('tr-TR') + ' TRY'
+                : ' —',
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: { font: { family: 'Inter', size: 11 }, color: '#9ca3af', maxRotation: 0, maxTicksLimit: 6 },
+            grid:  { color: '#f3f4f6' },
+          },
+          y: {
+            beginAtZero: false,
+            ticks: { font: { family: 'Inter', size: 11 }, color: '#9ca3af', callback: v => v.toLocaleString('tr-TR') },
+            grid:  { color: '#f3f4f6' },
+          },
+        },
+      },
+    });
+
+  } catch (e) {
+    msg.textContent = 'Grafik yüklenemedi: ' + e.message;
+  }
+}
+
+/* ── Accordion (masaüstü) ───────────────────────────────────────── */
+async function toggleRow(index, url) {
+  const detailEl = document.getElementById('detail-' + index);
+  const rowEl    = document.getElementById('row-' + index);
+
+  if (expandedUrl === url) {
+    // Aynı satıra tıklandı → kapat
+    detailEl.style.display = 'none';
+    rowEl.classList.remove('expanded');
+    expandedUrl = null;
+    return;
+  }
+
+  // Önceki açık satırı kapat
+  if (expandedUrl !== null) {
+    const pi = currentProducts.findIndex(p => p.url === expandedUrl);
+    if (pi >= 0) {
+      document.getElementById('detail-' + pi)?.style.setProperty('display', 'none');
+      document.getElementById('row-' + pi)?.classList.remove('expanded');
+    }
+  }
+
+  // Yeni satırı aç
+  expandedUrl = url;
+  rowEl.classList.add('expanded');
+  detailEl.style.display = 'table-row';
+  await buildChart('chart-' + index, url, charts, index);
+}
+
+/* ── Mobil grafik accordion ─────────────────────────────────────── */
+async function toggleMobileChart(index, url) {
+  const wrap = document.getElementById('m-detail-' + index);
+  if (!wrap) return;
+
+  const isOpen = wrap.classList.contains('open');
+
+  if (isOpen) {
+    wrap.classList.remove('open');
+    expandedUrl = null;
+  } else {
+    // Önceki açık mobil grafiği kapat
+    if (expandedUrl !== null) {
+      const pi = currentProducts.findIndex(p => p.url === expandedUrl);
+      if (pi >= 0) document.getElementById('m-detail-' + pi)?.classList.remove('open');
+    }
+    wrap.classList.add('open');
+    expandedUrl = url;
+    await buildChart('m-chart-' + index, url, mCharts, 'm' + index);
+  }
+}
+
+/* ── Ürün sil ───────────────────────────────────────────────────── */
+async function deleteProduct(id, name) {
+  // Kullanıcıdan onay al
+  if (!confirm(`"${name}" ürününü takipten çıkarmak istediğine emin misin?\n\nTüm fiyat geçmişi de silinecek.`)) return;
+
+  try {
+    const r = await fetch(`/products/${id}`, { method: 'DELETE' });
+    if (!r.ok) {
+      const d = await r.json();
+      alert('Silinemedi: ' + (d.detail || r.status));
+      return;
+    }
+    // Grafik cache'lerini temizle ve tabloyu yenile
+    destroyAllCharts();
+    const products = await fetchProducts();
+    currentProducts = products;
+    renderTable(products);
+    document.getElementById('last-update').textContent = 'Son güncelleme: ' + nowTime();
+  } catch (e) {
+    alert('Hata: ' + e.message);
+  }
+}
+
+/* ── Hedef fiyat popup ──────────────────────────────────────────── */
+function openPopup(id, name, currentTarget) {
+  popupProductId = id;
+  popupHasTarget = currentTarget !== null;
+
+  document.getElementById('popup-name').textContent  = name;
+  document.getElementById('popup-input').value       = currentTarget ?? '';
+  document.getElementById('popup-clear-btn').style.display = popupHasTarget ? 'inline-block' : 'none';
+  document.getElementById('overlay').style.display  = 'flex';
+  setTimeout(() => document.getElementById('popup-input').focus(), 50);
+}
+
+function closePopup(e) {
+  // Overlay'e tıklandığında kapat (popup içine tıklamada event.stopPropagation zaten var)
+  if (e && e.target !== document.getElementById('overlay')) return;
+  document.getElementById('overlay').style.display = 'none';
+  popupProductId = null;
+}
+
+async function saveTarget() {
+  if (!popupProductId) return;
+
+  const val     = document.getElementById('popup-input').value.trim();
+  const target  = val === '' ? null : parseFloat(val);
+
+  if (val !== '' && (isNaN(target) || target < 0)) {
+    document.getElementById('popup-input').focus();
+    return;
+  }
+
+  try {
+    const r = await fetch(`/products/${popupProductId}/target`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_price: target }),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || r.status);
+
+    document.getElementById('overlay').style.display = 'none';
+    popupProductId = null;
+
+    // Tabloyu sessizce güncelle (tüm grafikleri bozmadan)
+    destroyAllCharts();
+    const products = await fetchProducts();
+    currentProducts = products;
+    renderTable(products);
+    document.getElementById('last-update').textContent = 'Son güncelleme: ' + nowTime();
+
+  } catch (e) {
+    alert('Hata: ' + e.message);
+  }
+}
+
+async function clearTarget() {
+  if (!popupProductId) return;
+  document.getElementById('popup-input').value = '';
+  await saveTarget();
+}
+
+/* ── Ürün ekle (POST /track) ────────────────────────────────────── */
+async function trackProduct() {
+  const input = document.getElementById('add-input');
+  const btn   = document.getElementById('add-btn');
+  const url   = input.value.trim();
+
+  if (!url) { showStatus('err', '✗ Lütfen bir URL girin.'); input.focus(); return; }
+
+  btn.disabled    = true;
+  btn.textContent = 'Yükleniyor…';
+  clearStatus();
+
+  try {
+    const r    = await fetch('/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const data = await r.json();
+
+    if (!r.ok) {
+      // Pydantic validation hatası dizi döner
+      const msg = Array.isArray(data.detail)
+        ? (data.detail[0]?.msg || `HTTP ${r.status}`)
+        : (data.detail || `HTTP ${r.status}`);
+      showStatus('err', '✗ Hata: ' + msg);
+    } else {
+      const parts = [data.name, data.price].filter(Boolean);
+      showStatus('ok', '✓ Ürün eklendi: ' + (parts.join(' — ') || url));
+      input.value = '';
+      destroyAllCharts();
+      const products = await fetchProducts();
+      currentProducts = products;
+      renderTable(products);
+      document.getElementById('last-update').textContent = 'Son güncelleme: ' + nowTime();
+    }
+  } catch (e) {
+    showStatus('err', '✗ Hata: ' + e.message);
+  }
+
+  btn.disabled    = false;
+  btn.textContent = 'Takibe Al';
+}
+
+// Başarı / hata mesajı (8 saniye sonra otomatik kapanır)
+function showStatus(type, msg) {
+  clearStatus();
+  const el    = document.createElement('div');
+  el.id       = 'add-status';
+  el.className = 'add-status ' + type;
+  el.textContent = msg;
+  document.querySelector('.add-bar').appendChild(el);
+  el._timer = setTimeout(() => el.remove(), 8000);
+}
+
+function clearStatus() {
+  const old = document.getElementById('add-status');
+  if (old) { clearTimeout(old._timer); old.remove(); }
+}
+
+/* ── Yenile butonu ──────────────────────────────────────────────── */
+async function refresh() {
+  const btn  = document.getElementById('refresh-btn');
+  const icon = document.getElementById('refresh-icon');
+  btn.disabled  = true;
+  icon.className = 'spin';
+
+  destroyAllCharts();
+
+  try {
+    const products = await fetchProducts();
+    currentProducts = products;
+    renderTable(products);
+    document.getElementById('last-update').textContent = 'Son güncelleme: ' + nowTime();
+  } catch (e) {
+    alert('Veriler yüklenemedi: ' + e.message);
+  }
+
+  icon.className = '';
+  btn.disabled   = false;
+}
+
+/* ── Chart cache temizleme ──────────────────────────────────────── */
+function destroyAllCharts() {
+  Object.values(charts).forEach(c => c.destroy());
+  Object.keys(charts).forEach(k => delete charts[k]);
+  Object.values(mCharts).forEach(c => c.destroy());
+  Object.keys(mCharts).forEach(k => delete mCharts[k]);
+  expandedUrl = null;
+}
+
+/* ── Klavye kısayolu: Escape → popup kapat ──────────────────────── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('overlay').style.display = 'none';
+});
+
+/* ── İlk yükleme ────────────────────────────────────────────────── */
+(async function init() {
+  try {
+    const products = await fetchProducts();
+    currentProducts = products;
+    renderTable(products);
+    document.getElementById('last-update').textContent = 'Son güncelleme: ' + nowTime();
+  } catch (e) {
+    document.getElementById('card').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <h2>Veriler yüklenemedi</h2>
+        <p>${esc(e.message)}</p>
+      </div>`;
+  }
+})();
+</script>
+</body>
+</html>

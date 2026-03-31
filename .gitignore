@@ -1,0 +1,20 @@
+# Ortam değişkenleri — asla commit'leme
+.env
+
+# Veritabanı dosyası
+prices.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Claude Code
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
